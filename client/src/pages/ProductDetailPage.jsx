@@ -1,26 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout';
 import { ProductCard } from '../components/product/ProductCard';
 import { mockProducts } from '../data/mockProducts';
 import { useCart } from '../hooks/useCart';
 import { formatCurrency } from '../utils/formatters';
-import { Star, ShoppingCart, Heart, ShieldCheck, Truck, RotateCcw, ArrowLeft, Check } from 'lucide-react';
+import { Star, ShoppingCart, Heart, ShieldCheck, Truck, RotateCcw, ArrowLeft, Check, AlertCircle } from 'lucide-react';
 
 export const ProductDetailPage = () => {
   const { id } = useParams();
   const { addToCart } = useCart();
 
-  const product = mockProducts.find((p) => p._id === id) || mockProducts[0];
+  const product = mockProducts.find((p) => p._id === id);
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
 
+  // Reset state and scroll to top when route param id changes
+  useEffect(() => {
+    setQuantity(1);
+    setIsAdded(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [id]);
+
+  // Gracefully handle missing or invalid product IDs
+  if (!product) {
+    return (
+      <MainLayout>
+        <div className="container" style={{ padding: '5rem 1.5rem', textAlign: 'center' }}>
+          <div
+            style={{
+              width: '4.5rem',
+              height: '4.5rem',
+              borderRadius: '50%',
+              backgroundColor: 'var(--neutral-100)',
+              color: 'var(--neutral-700)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem auto',
+            }}
+          >
+            <AlertCircle size={36} />
+          </div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--neutral-900)', marginBottom: '0.75rem' }}>
+            Product Not Found
+          </h2>
+          <p style={{ color: 'var(--neutral-700)', marginBottom: '2rem', maxWidth: '420px', margin: '0 auto 2rem auto' }}>
+            The product you are looking for does not exist or may have been removed from our catalog.
+          </p>
+          <Link to="/shop" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem' }}>
+            <ArrowLeft size={18} /> Back to Shop
+          </Link>
+        </div>
+      </MainLayout>
+    );
+  }
+
   const relatedProducts = mockProducts
     .filter((p) => p.category === product.category && p._id !== product._id)
-    .slice(0, 3);
+    .slice(0, 4);
 
   const handleAddToCart = () => {
+    if (!product.inStock) return;
     addToCart(product, quantity);
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 1500);
@@ -30,9 +72,10 @@ export const ProductDetailPage = () => {
     <MainLayout>
       <div className="container" style={{ padding: '3rem 1.5rem' }}>
         {/* Breadcrumb Navigation */}
-        <div style={{ marginBottom: '2rem', fontSize: '0.9rem', color: 'var(--neutral-700)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Link to="/" style={{ color: 'var(--neutral-700)' }}>Home</Link> /
+        <div style={{ marginBottom: '2rem', fontSize: '0.9rem', color: 'var(--neutral-700)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <Link to="/" style={{ color: 'var(--neutral-700)', hover: { color: 'var(--primary-600)' } }}>Home</Link> /
           <Link to="/shop" style={{ color: 'var(--neutral-700)' }}>Shop</Link> /
+          <Link to={`/shop?category=${encodeURIComponent(product.category)}`} style={{ color: 'var(--neutral-700)' }}>{product.category}</Link> /
           <span style={{ color: 'var(--neutral-900)', fontWeight: 600 }}>{product.name}</span>
         </div>
 
@@ -44,18 +87,25 @@ export const ProductDetailPage = () => {
             <img
               src={product.imageUrl}
               alt={product.name}
-              style={{ width: '100%', maxHeight: '480px', objectFit: 'cover' }}
+              style={{ width: '100%', maxHeight: '500px', objectFit: 'cover' }}
             />
-            {product.discount > 0 && (
-              <span style={{ position: 'absolute', top: '1rem', left: '1rem', backgroundColor: 'var(--danger)', color: '#fff', fontSize: '0.85rem', fontWeight: 800, padding: '0.36rem 0.75rem', borderRadius: '0.5rem' }}>
-                -{product.discount}% OFF
-              </span>
-            )}
+            <div style={{ position: 'absolute', top: '1rem', left: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {product.discount > 0 && (
+                <span style={{ backgroundColor: 'var(--danger)', color: '#fff', fontSize: '0.85rem', fontWeight: 800, padding: '0.35rem 0.75rem', borderRadius: '0.5rem' }}>
+                  -{product.discount}% OFF
+                </span>
+              )}
+              {product.badge && (
+                <span style={{ backgroundColor: 'var(--neutral-900)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, padding: '0.35rem 0.75rem', borderRadius: '0.5rem', textTransform: 'uppercase' }}>
+                  {product.badge}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Right Column: Product Specs & Ordering */}
           <div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-600)', textTransform: 'uppercase', tracking: '0.05em', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-600)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
               {product.category}
             </div>
 
@@ -67,7 +117,7 @@ export const ProductDetailPage = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Star size={18} fill="#f59e0b" color="#f59e0b" />
-                <span style={{ fontWeight: 800, fontSize: '1rem' }}>{product.rating}</span>
+                <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--neutral-900)' }}>{product.rating}</span>
                 <span style={{ color: 'var(--neutral-700)', fontSize: '0.9rem' }}>({product.reviewsCount} verified reviews)</span>
               </div>
 
@@ -88,6 +138,11 @@ export const ProductDetailPage = () => {
                   {formatCurrency(product.originalPrice)}
                 </span>
               )}
+              {product.discount > 0 && (
+                <span style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 700 }}>
+                  Save {formatCurrency(product.originalPrice - product.price)}
+                </span>
+              )}
             </div>
 
             {/* Description */}
@@ -97,31 +152,63 @@ export const ProductDetailPage = () => {
 
             {/* Quantity Selector & Action Buttons */}
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--neutral-300)', borderRadius: '0.6rem', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--neutral-300)', borderRadius: '0.6rem', overflow: 'hidden', backgroundColor: '#ffffff' }}>
                 <button
+                  type="button"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  style={{ padding: '0.6rem 1rem', fontSize: '1.1rem', backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-800)' }}
+                  disabled={quantity <= 1 || !product.inStock}
+                  style={{
+                    padding: '0.75rem 1.1rem',
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    backgroundColor: 'var(--neutral-100)',
+                    color: quantity <= 1 ? 'var(--neutral-400)' : 'var(--neutral-800)',
+                    cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
+                  }}
+                  aria-label="Decrease quantity"
                 >
                   -
                 </button>
-                <span style={{ padding: '0.6rem 1.25rem', fontWeight: 700, fontSize: '1rem', backgroundColor: '#fff' }}>{quantity}</span>
+                <span style={{ padding: '0.75rem 1.25rem', fontWeight: 700, fontSize: '1rem', minWidth: '3rem', textAlign: 'center' }}>
+                  {quantity}
+                </span>
                 <button
+                  type="button"
                   onClick={() => setQuantity(quantity + 1)}
-                  style={{ padding: '0.6rem 1rem', fontSize: '1.1rem', backgroundColor: 'var(--neutral-100)', color: 'var(--neutral-800)' }}
+                  disabled={!product.inStock}
+                  style={{
+                    padding: '0.75rem 1.1rem',
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    backgroundColor: 'var(--neutral-100)',
+                    color: 'var(--neutral-800)',
+                    cursor: !product.inStock ? 'not-allowed' : 'pointer',
+                  }}
+                  aria-label="Increase quantity"
                 >
                   +
                 </button>
               </div>
 
               <button
+                type="button"
                 onClick={handleAddToCart}
                 disabled={!product.inStock}
                 className={`btn ${isAdded ? 'btn-accent' : 'btn-primary'}`}
-                style={{ padding: '0.85rem 2rem', fontSize: '1rem', flex: 1, minWidth: '180px' }}
+                style={{
+                  padding: '0.85rem 2rem',
+                  fontSize: '1rem',
+                  flex: 1,
+                  minWidth: '200px',
+                  opacity: !product.inStock ? 0.6 : 1,
+                  cursor: !product.inStock ? 'not-allowed' : 'pointer',
+                }}
               >
-                {isAdded ? (
+                {!product.inStock ? (
+                  'Out of Stock'
+                ) : isAdded ? (
                   <>
-                    <Check size={20} /> Added to Cart
+                    <Check size={20} /> Added to Cart!
                   </>
                 ) : (
                   <>
@@ -131,20 +218,24 @@ export const ProductDetailPage = () => {
               </button>
 
               <button
+                type="button"
                 onClick={() => setIsWishlisted(!isWishlisted)}
                 style={{
-                  width: '3.25rem',
-                  height: '3.25rem',
+                  width: '3.5rem',
+                  height: '3.5rem',
                   borderRadius: '0.6rem',
                   border: '1px solid var(--neutral-300)',
+                  backgroundColor: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: isWishlisted ? '#ef4444' : 'var(--neutral-700)',
+                  boxShadow: 'var(--shadow-sm)',
+                  transition: 'all 0.2s ease',
                 }}
-                title="Wishlist"
+                title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
               >
-                <Heart size={20} fill={isWishlisted ? '#ef4444' : 'none'} />
+                <Heart size={22} fill={isWishlisted ? '#ef4444' : 'none'} />
               </button>
             </div>
 
@@ -183,3 +274,4 @@ export const ProductDetailPage = () => {
     </MainLayout>
   );
 };
+

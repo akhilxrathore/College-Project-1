@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowRight, ShoppingCart, ShieldCheck, Sparkles, Star } from 'lucide-react';
 import heroShowcase from '../../assets/hero_showcase.jpg';
 
@@ -90,15 +91,16 @@ export const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', marginBottom: '2.5rem' }}>
-              <a href="#featured" className="btn btn-primary" style={{ padding: '0.85rem 1.85rem', fontSize: '1rem' }}>
+              <Link to="/shop" className="btn btn-primary" style={{ padding: '0.85rem 1.85rem', fontSize: '1rem' }}>
                 <span>Shop Now</span>
                 <ArrowRight size={18} />
-              </a>
+              </Link>
 
-              <a href="#categories" className="btn btn-secondary" style={{ padding: '0.85rem 1.75rem', fontSize: '1rem' }}>
+              <Link to="/shop" className="btn btn-secondary" style={{ padding: '0.85rem 1.75rem', fontSize: '1rem' }}>
                 <span>Explore Products</span>
-              </a>
+              </Link>
             </div>
+
 
             {/* Social Proof Stats */}
             <div
