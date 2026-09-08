@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, ShoppingCart, User, Menu, X, Search } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, User, Menu, X, Search, LogOut, Package, ChevronDown } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
+import { useAuth } from '../../hooks/useAuth';
 
 export const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
   const { totalCartCount } = useCart();
+  const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -17,6 +21,13 @@ export const Navbar = () => {
       setSearchQuery('');
       setMobileMenuOpen(false);
     }
+  };
+
+  const handleLogout = async () => {
+    setUserDropdownOpen(false);
+    setMobileMenuOpen(false);
+    await logout();
+    navigate('/login');
   };
 
   const isActive = (path) => location.pathname === path;
@@ -57,7 +68,7 @@ export const Navbar = () => {
               transition: 'border-color 0.2s ease',
             }}
           />
-          <button type="submit" style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--neutral-700)' }}>
+          <button type="submit" style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--neutral-700)', background: 'none', border: 'none', cursor: 'pointer' }}>
             <Search size={16} />
           </button>
         </form>
@@ -114,17 +125,166 @@ export const Navbar = () => {
             )}
           </Link>
 
-          {/* Login Button */}
-          <Link to="/login" className="btn btn-primary" style={{ padding: '0.55rem 1.15rem', fontSize: '0.875rem' }}>
-            <User size={16} />
-            <span>Login</span>
-          </Link>
+          {/* User Auth Section */}
+          {isAuthenticated && user ? (
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.4rem 0.75rem',
+                  borderRadius: '9999px',
+                  border: '1px solid var(--neutral-300)',
+                  backgroundColor: '#ffffff',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: 'var(--neutral-800)',
+                }}
+              >
+                <div
+                  style={{
+                    width: '1.75rem',
+                    height: '1.75rem',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--primary-600)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.name.split(' ')[0]}
+                </span>
+                <ChevronDown size={14} color="var(--neutral-500)" />
+              </button>
+
+              {/* User Dropdown Menu */}
+              {userDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 'calc(100% + 0.5rem)',
+                    width: '13rem',
+                    backgroundColor: '#ffffff',
+                    borderRadius: '0.85rem',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                    border: '1px solid var(--neutral-200)',
+                    padding: '0.5rem',
+                    zIndex: 110,
+                  }}
+                >
+                  <div style={{ padding: '0.6rem 0.8rem', borderBottom: '1px solid var(--neutral-100)', marginBottom: '0.35rem' }}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--neutral-900)', margin: 0 }}>
+                      {user.name}
+                    </p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--neutral-500)', margin: '0.1rem 0 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user.email}
+                    </p>
+                  </div>
+
+                  <Link
+                    to="/profile"
+                    onClick={() => setUserDropdownOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.6rem',
+                      padding: '0.6rem 0.8rem',
+                      fontSize: '0.85rem',
+                      color: 'var(--neutral-700)',
+                      fontWeight: 500,
+                      borderRadius: '0.5rem',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <User size={16} />
+                    <span>My Profile</span>
+                  </Link>
+
+                  <Link
+                    to="/orders"
+                    onClick={() => setUserDropdownOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.6rem',
+                      padding: '0.6rem 0.8rem',
+                      fontSize: '0.85rem',
+                      color: 'var(--neutral-700)',
+                      fontWeight: 500,
+                      borderRadius: '0.5rem',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <Package size={16} />
+                    <span>My Orders</span>
+                  </Link>
+
+                  <div style={{ borderTop: '1px solid var(--neutral-100)', marginTop: '0.35rem', paddingTop: '0.35rem' }}>
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.6rem',
+                        padding: '0.6rem 0.8rem',
+                        fontSize: '0.85rem',
+                        color: '#dc2626',
+                        fontWeight: 600,
+                        borderRadius: '0.5rem',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <LogOut size={16} />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <Link
+                to="/login"
+                className="btn btn-primary"
+                style={{ padding: '0.55rem 1.15rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <User size={16} />
+                <span>Login</span>
+              </Link>
+              <Link
+                to="/register"
+                style={{
+                  padding: '0.55rem 1rem',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: 'var(--neutral-700)',
+                  textDecoration: 'none',
+                }}
+              >
+                Register
+              </Link>
+            </div>
+          )}
 
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="mobile-toggle"
-            style={{ display: 'none', color: 'var(--neutral-800)', padding: '0.4rem' }}
+            style={{ display: 'none', color: 'var(--neutral-800)', padding: '0.4rem', background: 'none', border: 'none', cursor: 'pointer' }}
             aria-label="Toggle Navigation Menu"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -149,16 +309,79 @@ export const Navbar = () => {
                 fontSize: '0.9rem',
               }}
             />
-            <button type="submit" style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)' }}>
+            <button type="submit" style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none' }}>
               <Search size={16} />
             </button>
           </form>
 
-          <Link to="/" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 600, color: 'var(--primary-600)' }}>Home</Link>
-          <Link to="/shop" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 500, color: 'var(--neutral-700)' }}>Shop All</Link>
-          <Link to="/shop?category=Electronics" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 500, color: 'var(--neutral-700)' }}>Electronics</Link>
-          <Link to="/shop?category=Fashion" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 500, color: 'var(--neutral-700)' }}>Fashion</Link>
-          <Link to="/shop?category=Home%20%26%20Living" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 500, color: 'var(--neutral-700)' }}>Home & Living</Link>
+          <Link to="/" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 600, color: 'var(--primary-600)', textDecoration: 'none' }}>Home</Link>
+          <Link to="/shop" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 500, color: 'var(--neutral-700)', textDecoration: 'none' }}>Shop All</Link>
+          <Link to="/shop?category=Electronics" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 500, color: 'var(--neutral-700)', textDecoration: 'none' }}>Electronics</Link>
+          <Link to="/shop?category=Fashion" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 500, color: 'var(--neutral-700)', textDecoration: 'none' }}>Fashion</Link>
+          <Link to="/shop?category=Home%20%26%20Living" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 500, color: 'var(--neutral-700)', textDecoration: 'none' }}>Home & Living</Link>
+
+          <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+            {isAuthenticated && user ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--neutral-500)', fontWeight: 600 }}>
+                  Signed in as <strong style={{ color: 'var(--neutral-900)' }}>{user.name}</strong>
+                </div>
+                <Link to="/profile" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 600, color: 'var(--neutral-800)', textDecoration: 'none' }}>My Profile</Link>
+                <Link to="/orders" onClick={() => setMobileMenuOpen(false)} style={{ fontWeight: 600, color: 'var(--neutral-800)', textDecoration: 'none' }}>My Orders</Link>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    color: '#dc2626',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    textAlign: 'center',
+                    padding: '0.65rem',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--primary-600)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    textAlign: 'center',
+                    padding: '0.65rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid var(--neutral-300)',
+                    color: 'var(--neutral-800)',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Create Account
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

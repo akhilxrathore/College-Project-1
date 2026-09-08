@@ -1,7 +1,9 @@
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 const ApiError = require('../utils/apiError');
+const { inMemoryUsers } = require('../controllers/authController');
 
 // Middleware to protect routes via JWT token
 const protect = asyncHandler(async (req, res, next) => {
@@ -18,8 +20,25 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-    req.user = await User.findById(decoded.id).select('-password');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'shopsphere_super_secret_jwt_key_2026');
+
+    if (mongoose.connection.readyState === 1) {
+      req.user = await User.findById(decoded.id).select('-password');
+    } else {
+      // Memory fallback lookup
+      for (const u of inMemoryUsers.values()) {
+        if (u._id.toString() === decoded.id.toString()) {
+          const { password, ...userNoPass } = u;
+          req.user = userNoPass;
+          break;
+        }
+      }
+    }
+
+    if (!req.user) {
+      throw new ApiError(401, 'Not authorized, user not found');
+    }
+
     next();
   } catch (error) {
     throw new ApiError(401, 'Not authorized, token verification failed');

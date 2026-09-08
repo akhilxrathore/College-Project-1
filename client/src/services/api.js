@@ -3,12 +3,13 @@ import { API_BASE_URL } from '../utils/constants';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Interceptor to attach JWT auth token
+// Interceptor to attach JWT auth token if present in localStorage
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('shopsphere_token');

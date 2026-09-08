@@ -4,10 +4,17 @@ import { Star, ShoppingCart, Heart, Check } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { formatCurrency } from '../../utils/formatters';
 
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80';
+
 export const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
+  const [imgSrc, setImgSrc] = useState(product.imageUrl || product.image || FALLBACK_IMAGE);
+
+  const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
+  const reviewCount = product.reviewsCount || product.reviewCount || product.numReviews || 0;
+  const isInStock = product.inStock !== undefined ? product.inStock : (product.stock > 0);
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
@@ -38,8 +45,9 @@ export const ProductCard = ({ product }) => {
       {/* Top Image Container */}
       <Link to={`/product/${product._id}`} style={{ position: 'relative', height: '220px', overflow: 'hidden', backgroundColor: 'var(--neutral-100)', display: 'block' }}>
         <img
-          src={product.imageUrl}
+          src={imgSrc}
           alt={product.name}
+          onError={() => setImgSrc(FALLBACK_IMAGE)}
           style={{
             width: '100%',
             height: '100%',
@@ -109,7 +117,7 @@ export const ProductCard = ({ product }) => {
       <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
         {/* Category Pill */}
         <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary-600)', marginBottom: '0.4rem' }}>
-          {product.category}
+          {categoryName}
         </div>
 
         {/* Product Title */}
@@ -134,10 +142,10 @@ export const ProductCard = ({ product }) => {
             <Star size={15} fill="#f59e0b" />
           </div>
           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--neutral-900)' }}>
-            {product.rating}
+            {product.rating || 4.5}
           </span>
           <span style={{ fontSize: '0.8rem', color: 'var(--neutral-700)' }}>
-            ({product.reviewsCount})
+            ({reviewCount})
           </span>
         </div>
 
@@ -156,16 +164,16 @@ export const ProductCard = ({ product }) => {
 
           <button
             onClick={handleAddToCart}
-            disabled={product.inStock === false}
+            disabled={!isInStock}
             className={`btn ${isAdded ? 'btn-accent' : 'btn-primary'}`}
             style={{
               padding: '0.5rem 1rem',
               fontSize: '0.85rem',
-              opacity: product.inStock === false ? 0.6 : 1,
-              cursor: product.inStock === false ? 'not-allowed' : 'pointer',
+              opacity: !isInStock ? 0.6 : 1,
+              cursor: !isInStock ? 'not-allowed' : 'pointer',
             }}
           >
-            {product.inStock === false ? (
+            {!isInStock ? (
               'Sold Out'
             ) : isAdded ? (
               <>

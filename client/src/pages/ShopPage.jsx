@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout';
 import { ProductCard } from '../components/product/ProductCard';
-import { mockProducts, mockCategories } from '../data/mockProducts';
-import { Filter, SlidersHorizontal, Search, RotateCcw, X, Star } from 'lucide-react';
+import { productService } from '../services/productService';
+import { Filter, SlidersHorizontal, Search, RotateCcw, X, AlertCircle } from 'lucide-react';
 
 export const ShopPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -17,6 +17,12 @@ export const ShopPage = () => {
   const [sortBy, setSortBy] = useState('newest');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
+  // Data & API states
+  const [products, setProducts] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   // Sync URL search params when category or search changes
   useEffect(() => {
     const urlCat = searchParams.get('category');
@@ -24,6 +30,51 @@ export const ShopPage = () => {
     if (urlCat) setSelectedCategory(urlCat);
     if (urlSearch) setSearchQuery(urlSearch);
   }, [searchParams]);
+
+  // Fetch products from backend REST API
+  const loadProducts = useCallback(async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const params = {
+        limit: 100,
+        sort: sortBy,
+      };
+
+      if (selectedCategory && selectedCategory !== 'All') {
+        params.category = selectedCategory;
+      }
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+      if (maxPrice < 300) {
+        params.maxPrice = maxPrice;
+      }
+      if (minRating > 0) {
+        params.minRating = minRating;
+      }
+      if (inStockOnly) {
+        params.inStock = 'true';
+      }
+
+      const res = await productService.getProducts(params);
+      const productList = res?.data?.products || res?.products || res?.data || (Array.isArray(res) ? res : []);
+      const total = res?.data?.total || res?.total || productList.length;
+
+      setProducts(productList);
+      setTotalCount(total);
+    } catch (err) {
+      console.error('Error fetching shop products:', err);
+      setError('Failed to fetch products. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedCategory, searchQuery, maxPrice, minRating, inStockOnly, sortBy]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   // Handle Category Select
   const handleCategoryChange = (catName) => {
@@ -46,38 +97,6 @@ export const ShopPage = () => {
     setSortBy('newest');
     setSearchParams({});
   };
-
-  // Filter & Sort Logic
-  const filteredProducts = useMemo(() => {
-    return mockProducts
-      .filter((p) => {
-        // Category Filter
-        if (selectedCategory !== 'All' && p.category.toLowerCase() !== selectedCategory.toLowerCase()) {
-          return false;
-        }
-        // Search Query Filter
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const matchesName = p.name.toLowerCase().includes(q);
-          const matchesCat = p.category.toLowerCase().includes(q);
-          if (!matchesName && !matchesCat) return false;
-        }
-        // Price Filter
-        if (p.price > maxPrice) return false;
-        // Rating Filter
-        if (minRating > 0 && p.rating < minRating) return false;
-        // Availability Filter
-        if (inStockOnly && !p.inStock) return false;
-
-        return true;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'price-low') return a.price - b.price;
-        if (sortBy === 'price-high') return b.price - a.price;
-        if (sortBy === 'rating') return b.rating - a.rating;
-        return b._id.localeCompare(a._id); // Newest
-      });
-  }, [selectedCategory, searchQuery, maxPrice, minRating, inStockOnly, sortBy]);
 
   return (
     <MainLayout>
@@ -105,7 +124,7 @@ export const ShopPage = () => {
               </div>
               <button
                 onClick={handleResetFilters}
-                style={{ fontSize: '0.8rem', color: 'var(--primary-600)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                style={{ fontSize: '0.8rem', color: 'var(--primary-600)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'none', border: 'none', cursor: 'pointer' }}
                 title="Reset all filters"
               >
                 <RotateCcw size={14} /> Reset
@@ -135,6 +154,8 @@ export const ShopPage = () => {
                         backgroundColor: isSelected ? 'var(--primary-50)' : 'transparent',
                         color: isSelected ? 'var(--primary-600)' : 'var(--neutral-700)',
                         textAlign: 'left',
+                        border: 'none',
+                        cursor: 'pointer',
                         transition: 'all 0.15s ease',
                       }}
                     >
@@ -154,7 +175,7 @@ export const ShopPage = () => {
               </div>
               <input
                 type="range"
-                min="30"
+                min="20"
                 max="300"
                 step="10"
                 value={maxPrice}
@@ -162,7 +183,7 @@ export const ShopPage = () => {
                 style={{ width: '100%', accentColor: 'var(--primary-600)', cursor: 'pointer' }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--neutral-700)', marginTop: '0.35rem' }}>
-                <span>$30</span>
+                <span>$20</span>
                 <span>$300</span>
               </div>
             </div>
@@ -226,10 +247,10 @@ export const ShopPage = () => {
               {/* Product Count & Active Filters Indicator */}
               <div>
                 <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--neutral-900)' }}>
-                  Showing {filteredProducts.length}
+                  Showing {products.length}
                 </span>
                 <span style={{ fontSize: '0.875rem', color: 'var(--neutral-700)', marginLeft: '0.35rem' }}>
-                  of {mockProducts.length} items
+                  of {totalCount} items
                 </span>
               </div>
 
@@ -274,8 +295,47 @@ export const ShopPage = () => {
               </div>
             </div>
 
+            {/* Loading Spinner State */}
+            {loading && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem 0' }}>
+                <div
+                  style={{
+                    width: '3rem',
+                    height: '3rem',
+                    border: '3px solid var(--neutral-200)',
+                    borderTopColor: 'var(--primary-600)',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Error State */}
+            {!loading && error && (
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '4rem 2rem',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '1.25rem',
+                  border: '1px solid var(--neutral-200)',
+                }}
+              >
+                <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', backgroundColor: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+                  <AlertCircle size={32} />
+                </div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--neutral-900)', marginBottom: '0.5rem' }}>
+                  {error}
+                </h3>
+                <button onClick={loadProducts} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+                  Try Again
+                </button>
+              </div>
+            )}
+
             {/* Product Grid */}
-            {filteredProducts.length > 0 ? (
+            {!loading && !error && products.length > 0 && (
               <div
                 style={{
                   display: 'grid',
@@ -283,12 +343,14 @@ export const ShopPage = () => {
                   gap: '1.75rem',
                 }}
               >
-                {filteredProducts.map((product) => (
+                {products.map((product) => (
                   <ProductCard key={product._id} product={product} />
                 ))}
               </div>
-            ) : (
-              /* Empty State */
+            )}
+
+            {/* Empty State */}
+            {!loading && !error && products.length === 0 && (
               <div
                 style={{
                   textAlign: 'center',
@@ -322,7 +384,7 @@ export const ShopPage = () => {
           <div style={{ width: '100%', maxWidth: '320px', backgroundColor: '#ffffff', height: '100%', padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid var(--neutral-200)', marginBottom: '1.5rem' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--neutral-900)' }}>Filter Products</h3>
-              <button onClick={() => setMobileFilterOpen(false)} style={{ color: 'var(--neutral-700)', padding: '0.2rem' }}>
+              <button onClick={() => setMobileFilterOpen(false)} style={{ color: 'var(--neutral-700)', padding: '0.2rem', background: 'none', border: 'none' }}>
                 <X size={24} />
               </button>
             </div>
@@ -345,6 +407,8 @@ export const ShopPage = () => {
                     fontSize: '0.9rem',
                     fontWeight: selectedCategory === cat ? 700 : 400,
                     color: selectedCategory === cat ? 'var(--primary-600)' : 'var(--neutral-800)',
+                    background: 'none',
+                    border: 'none',
                   }}
                 >
                   {cat}
